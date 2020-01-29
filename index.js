@@ -1,3 +1,6 @@
+// Code based on
+// https://phaser.io/tutorials/coding-tips-005
+
 var game = new Phaser.Game(640, 480, Phaser.CANVAS, 'game');
 
 var PhaserGame = function (game) {
@@ -5,6 +8,7 @@ var PhaserGame = function (game) {
   this.map = null;
   this.layer = null;
   this.car = null;
+  this.statusText = null;
 
   this.safetile = 1;
   this.gridsize = 32;
@@ -14,6 +18,7 @@ var PhaserGame = function (game) {
   this.turnSpeed = 150;
 
   this.marker = new Phaser.Point();
+  this.lastMarker = new Phaser.Point();
   this.turnPoint = new Phaser.Point();
 
   this.directions = [null, null, null, null, null];
@@ -36,9 +41,11 @@ PhaserGame.prototype = {
 
     //  We need this because the assets are on Amazon S3
     //  Remove the next 2 lines if running locally
-    this.load.baseURL = 'http://files.phaser.io.s3.amazonaws.com/codingtips/issue005/';
+    // this.load.baseURL = 'http://files.phaser.io.s3.amazonaws.com/codingtips/issue005/';
+    this.load.baseURL = './';
     this.load.crossOrigin = 'anonymous';
 
+    // The walls
     this.load.tilemap('map', 'assets/maze.json', null, Phaser.Tilemap.TILED_JSON);
     this.load.image('tiles', 'assets/tiles.png');
     this.load.image('car', 'assets/car.png');
@@ -62,6 +69,8 @@ PhaserGame.prototype = {
     this.physics.arcade.enable(this.car);
 
     this.cursors = this.input.keyboard.createCursorKeys();
+
+    this.statusText = this.add.text(400, 0, '', { fill: "#0f0", fontFamily: 'Arial' });
 
     this.move(Phaser.DOWN);
 
@@ -89,7 +98,7 @@ PhaserGame.prototype = {
   },
 
   checkDirection: function (turnTo) {
-
+    console.log("Turnto", turnTo);
     if (this.turning === turnTo || this.directions[turnTo] === null || this.directions[turnTo].index !== this.safetile) {
       //  Invalid direction if they're already set to turn that way
       //  Or there is no tile there, or the tile isn't index a floor tile
@@ -97,7 +106,9 @@ PhaserGame.prototype = {
     }
 
     //  Check if they want to turn around and can
+    this.move(turnTo);
     if (this.current === this.opposites[turnTo]) {
+      console.log("opposites");
       this.move(turnTo);
     }
     else {
@@ -143,18 +154,25 @@ PhaserGame.prototype = {
     if (direction === Phaser.LEFT || direction === Phaser.RIGHT) {
       this.car.body.velocity.x = speed;
     }
-    else {
+    // else {
+    if (direction === Phaser.UP || direction === Phaser.DOWN) {
       this.car.body.velocity.y = speed;
     }
 
-    this.add.tween(this.car).to({ angle: this.getAngle(direction) }, this.turnSpeed, "Linear", true);
+    if (direction === Phaser.NONE) {
+      this.car.body.velocity.y = 0;
+      this.car.body.velocity.x = 0;
+    }
+
+    if (direction !== Phaser.NONE) {
+      this.add.tween(this.car).to({ angle: this.getAngle(direction) }, this.turnSpeed, "Linear", true);
+    }
 
     this.current = direction;
 
   },
 
   getAngle: function (to) {
-
     //  About-face?
     if (this.current === this.opposites[to]) {
       return "180";
@@ -178,6 +196,12 @@ PhaserGame.prototype = {
     this.marker.x = this.math.snapToFloor(Math.floor(this.car.x), this.gridsize) / this.gridsize;
     this.marker.y = this.math.snapToFloor(Math.floor(this.car.y), this.gridsize) / this.gridsize;
 
+    if (this.marker.x !== this.lastMarker.x || this.marker.y !== this.lastMarker.y) {
+      this.move(Phaser.NONE);
+      this.lastMarker.x = this.marker.x;
+      this.lastMarker.y = this.marker.y;
+    }
+
     //  Update our grid sensors
     this.directions[1] = this.map.getTileLeft(this.layer.index, this.marker.x, this.marker.y);
     this.directions[2] = this.map.getTileRight(this.layer.index, this.marker.x, this.marker.y);
@@ -197,6 +221,7 @@ PhaserGame.prototype = {
     //  Un-comment this to see the debug drawing
 
     for (var t = 1; t < 5; t++) {
+      // Color tiles around car
       if (this.directions[t] === null) {
         continue;
       }
@@ -214,8 +239,13 @@ PhaserGame.prototype = {
       this.game.debug.geom(new Phaser.Rectangle(this.directions[t].worldX, this.directions[t].worldY, 32, 32), color, true);
     }
 
+    // Yellow turning point
     this.game.debug.geom(this.turnPoint, '#ffff00');
+    this.statusText.text = "" + this.marker.x + " " + this.marker.y;
 
+    // this.move(Phaser.NONE);
+    // this.turning = Phaser.NONE;
+    // this.current = Phaser.NONE;
   }
 
 };

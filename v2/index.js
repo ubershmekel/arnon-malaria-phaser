@@ -1,3 +1,5 @@
+// Code based off of: https://phaser.io/examples/v2/tilemaps/csv-map-collide
+
 var game = new Phaser.Game(800, 600, Phaser.CANVAS, 'phaser-example', { preload: preload, create: create, update: update, render: render });
 
 function preload() {
@@ -13,6 +15,8 @@ var map;
 var layer;
 var cursors;
 var player;
+var helpText;
+var moneyLeft;
 
 function create() {
 
@@ -49,8 +53,9 @@ function create() {
 
     cursors = game.input.keyboard.createCursorKeys();
 
-    var help = game.add.text(16, 16, 'Arrows to move', { font: '14px Arial', fill: '#ffffff' });
-    help.fixedToCamera = true;
+    helpText = game.add.text(16, 16, 'Look for puddles', { font: '24px Arial', fill: '#ffffff' });
+    helpText.fixedToCamera = true;
+    moneyLeft = 1000;
 
 }
 
@@ -83,8 +88,11 @@ function update() {
     if (player.body.velocity.x === 0 && player.body.velocity.y === 0)
     {
         player.animations.stop();
+    } else {
+      moneyLeft = moneyLeft - 1;
     }
 
+    helpText.text = "Money left: " + moneyLeft;
 }
 
 function render() {
